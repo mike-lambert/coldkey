@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+group 'com.cyfrant'
+version '1.0'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'com.cyfrant.coldkey.Main'
+        )
+    }
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
