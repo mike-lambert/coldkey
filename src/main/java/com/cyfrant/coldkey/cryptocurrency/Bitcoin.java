@@ -4,7 +4,7 @@ import com.cyfrant.coldkey.Factory;
 
 import java.security.KeyPair;
 
-public class Bitcoin {
+public class Bitcoin implements AddressGenerator {
     public static Address newPrivateKey() throws Exception {
         final KeyPair keyPair = Factory.newECKeyPair();
         // address gen
@@ -12,5 +12,10 @@ public class Bitcoin {
         // key gen
         final String key = Factory.privateKeyToBase58(128, keyPair);
         return new Address(address, key);
+    }
+
+    @Override
+    public Address newAddress() throws Exception {
+        return newPrivateKey();
     }
 }
