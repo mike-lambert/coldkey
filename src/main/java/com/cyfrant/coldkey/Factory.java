@@ -29,6 +29,10 @@ import java.util.UUID;
 public class Factory {
     private final static SecureRandom random = new SecureRandom();
 
+    public static byte[] sha256(byte[] data) throws Exception {
+        return getMessageDigest().digest(data);
+    }
+
     public static MessageDigest getMessageDigest() throws Exception {
         return MessageDigest.getInstance(Constants.ALGO_HASH);
     }
