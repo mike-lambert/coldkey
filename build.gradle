@@ -20,5 +20,6 @@ jar {
 }
 
 dependencies {
+    compile 'org.bouncycastle:bcprov-jdk15to18:1.64'
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }

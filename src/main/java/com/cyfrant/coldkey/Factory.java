@@ -1,33 +1,50 @@
 package com.cyfrant.coldkey;
 
 import com.cyfrant.coldkey.digest.RipeMD160;
+import org.bouncycastle.asn1.eac.ECDSAPublicKey;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.ec.CustomNamedCurves;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.bouncycastle.jcajce.provider.asymmetric.util.ECUtil;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.math.ec.FixedPointCombMultiplier;
+import org.bouncycastle.math.ec.FixedPointUtil;
+import sun.security.ec.ECPrivateKeyImpl;
+import sun.security.ec.ECPublicKeyImpl;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.math.BigInteger;
 import java.nio.ByteBuffer;
-import java.security.Key;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.MessageDigest;
-import java.security.PrivateKey;
-import java.security.PublicKey;
-import java.security.SecureRandom;
-import java.security.Signature;
+import java.security.*;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
-import java.security.spec.ECGenParameterSpec;
-import java.security.spec.ECPoint;
-import java.security.spec.KeySpec;
-import java.security.spec.PKCS8EncodedKeySpec;
-import java.security.spec.X509EncodedKeySpec;
+import java.security.spec.*;
 import java.util.UUID;
 
 public class Factory {
     private final static SecureRandom random = new SecureRandom();
+    private static final X9ECParameters CURVE_PARAMS = CustomNamedCurves.getByName("secp256k1");
+
+    /** The parameters of the secp256k1 curve that Bitcoin uses. */
+    public static final ECDomainParameters CURVE;
+
+    /**
+     * Equal to CURVE.getN().shiftRight(1), used for canonicalising the S value of a signature. If you aren't
+     * sure what this is about, you can ignore it.
+     */
+    public static final BigInteger HALF_CURVE_ORDER;
+
+    static {
+        // Tell Bouncy Castle to precompute data that's needed during secp256k1 calculations.
+        FixedPointUtil.precompute(CURVE_PARAMS.getG());
+        CURVE = new ECDomainParameters(CURVE_PARAMS.getCurve(), CURVE_PARAMS.getG(), CURVE_PARAMS.getN(),
+                CURVE_PARAMS.getH());
+        HALF_CURVE_ORDER = CURVE_PARAMS.getN().shiftRight(1);
+    }
 
     public static byte[] sha256(byte[] data) throws Exception {
         return getMessageDigest().digest(data);
@@ -181,6 +198,8 @@ public class Factory {
                 return "0" + s;
             case 64:
                 return s;
+            case 128:
+                return s.substring(0, 64);
             default:
                 throw new IllegalArgumentException("not a valid key: " + s);
         }
@@ -225,5 +244,49 @@ public class Factory {
         System.arraycopy(r2, 0, a1, 0, r2.length);
         System.arraycopy(s3, 0, a1, 21, 4);
         return Base58.encode(a1);
+    }
+
+    public static ECPrivateKey privateKeyFromString(String base58) throws Exception {
+        byte[] data = Base58.decodeChecked(base58);
+        byte[] pdata = new byte[32];
+        System.arraycopy(data, 1, pdata, 0, 32);
+        BigInteger pp = new BigInteger(1, pdata);
+        AlgorithmParameters parameters = AlgorithmParameters.getInstance("EC", "SunEC");
+        parameters.init(new ECGenParameterSpec(Constants.ALGO_ECC));
+        ECParameterSpec ecParameters = parameters.getParameterSpec(ECParameterSpec.class);
+        ECPrivateKey privateKey = new ECPrivateKeyImpl(pp, ecParameters);
+        return privateKey;
+    }
+
+    public static ECPublicKey derivePublicKey(String base58) throws Exception {
+        byte[] data = Base58.decodeChecked(base58);
+        byte[] pdata = new byte[32];
+        System.arraycopy(data, 1, pdata, 0, 32);
+        BigInteger s = new BigInteger(1, pdata);
+        ECPrivateKey k = privateKeyFromString(base58);
+        org.bouncycastle.math.ec.ECPoint point = new FixedPointCombMultiplier().multiply(CURVE.getG(), s);
+        byte[] d = point.getEncoded(false);
+        byte[] xd = new byte[32];
+        byte[] yd = new byte[32];
+        System.arraycopy(d, 1, xd, 0, 32);
+        System.arraycopy(d, 33 , yd, 0, 32);
+        BigInteger x = new BigInteger(1, xd);
+        BigInteger y = new BigInteger(1, yd);
+        ECPoint kp = new ECPoint(x, y);
+        return new ECPublicKeyImpl(kp, k.getParams());
+    }
+
+    public static ECPublicKey derivePublicKey(ECPrivateKey key) throws Exception {
+        BigInteger s = key.getS();
+        org.bouncycastle.math.ec.ECPoint point = new FixedPointCombMultiplier().multiply(CURVE.getG(), s);
+        byte[] d = point.getEncoded(false);
+        byte[] xd = new byte[32];
+        byte[] yd = new byte[32];
+        System.arraycopy(d, 1, xd, 0, 32);
+        System.arraycopy(d, 33 , yd, 0, 32);
+        BigInteger x = new BigInteger(1, xd);
+        BigInteger y = new BigInteger(1, yd);
+        ECPoint kp = new ECPoint(x, y);
+        return new ECPublicKeyImpl(kp, key.getParams());
     }
 }
