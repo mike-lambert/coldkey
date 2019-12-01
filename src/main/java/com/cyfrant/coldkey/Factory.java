@@ -1,12 +1,9 @@
 package com.cyfrant.coldkey;
 
 import com.cyfrant.coldkey.digest.RipeMD160;
-import org.bouncycastle.asn1.eac.ECDSAPublicKey;
 import org.bouncycastle.asn1.x9.X9ECParameters;
 import org.bouncycastle.crypto.ec.CustomNamedCurves;
 import org.bouncycastle.crypto.params.ECDomainParameters;
-import org.bouncycastle.jcajce.provider.asymmetric.util.ECUtil;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.math.ec.FixedPointCombMultiplier;
 import org.bouncycastle.math.ec.FixedPointUtil;
 import sun.security.ec.ECPrivateKeyImpl;
@@ -259,21 +256,8 @@ public class Factory {
     }
 
     public static ECPublicKey derivePublicKey(String base58) throws Exception {
-        byte[] data = Base58.decodeChecked(base58);
-        byte[] pdata = new byte[32];
-        System.arraycopy(data, 1, pdata, 0, 32);
-        BigInteger s = new BigInteger(1, pdata);
-        ECPrivateKey k = privateKeyFromString(base58);
-        org.bouncycastle.math.ec.ECPoint point = new FixedPointCombMultiplier().multiply(CURVE.getG(), s);
-        byte[] d = point.getEncoded(false);
-        byte[] xd = new byte[32];
-        byte[] yd = new byte[32];
-        System.arraycopy(d, 1, xd, 0, 32);
-        System.arraycopy(d, 33 , yd, 0, 32);
-        BigInteger x = new BigInteger(1, xd);
-        BigInteger y = new BigInteger(1, yd);
-        ECPoint kp = new ECPoint(x, y);
-        return new ECPublicKeyImpl(kp, k.getParams());
+        ECPrivateKey p = privateKeyFromString(base58);
+        return derivePublicKey(p);
     }
 
     public static ECPublicKey derivePublicKey(ECPrivateKey key) throws Exception {
