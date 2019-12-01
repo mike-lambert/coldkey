@@ -1,13 +1,7 @@
 package com.cyfrant.coldkey;
 
 import com.cyfrant.coldkey.cryptocurrency.Address;
-import com.cyfrant.coldkey.cryptocurrency.AddressGenerator;
-import com.cyfrant.coldkey.cryptocurrency.Bitcoin;
-import com.cyfrant.coldkey.cryptocurrency.Dash;
-import com.cyfrant.coldkey.cryptocurrency.Litecoin;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import com.cyfrant.coldkey.registry.Registry;
 
 public class Main {
     public static void main(String[] args) {
@@ -16,12 +10,10 @@ public class Main {
             System.exit(1);
             return;
         }
-        final Map<String, AddressGenerator> supported = new ConcurrentHashMap<>();
-        supported.put("BTC", new Bitcoin());
-        supported.put("LTC", new Litecoin());
-        supported.put("DASH", new Dash());
+
         try {
-            Address address = supported.get(args[0].toUpperCase().trim()).newAddress();
+            String code = args[0].toUpperCase().trim();
+            Address address = Registry.getInstance().getNetworkParams(code).createAddressGenerator().newAddress();
             System.out.println(address.getAddress() + " " + address.getPrivateKey());
         } catch (Exception e) {
             e.printStackTrace();
