@@ -219,6 +219,11 @@ public class Factory {
 
     public static String publicKeyToAddress(int version, KeyPair keyPair) throws Exception {
         final ECPublicKey epub = (ECPublicKey) keyPair.getPublic();
+        return publicKeyToAddress(version, epub);
+    }
+
+    public static String publicKeyToAddress(int version, ECPublicKey key) throws Exception {
+        final ECPublicKey epub = key;
         final ECPoint pt = epub.getW();
         final String sx = adjustTo64(pt.getAffineX().toString(16)).toUpperCase();
         final String sy = adjustTo64(pt.getAffineY().toString(16)).toUpperCase();
@@ -272,5 +277,10 @@ public class Factory {
         BigInteger y = new BigInteger(1, yd);
         ECPoint kp = new ECPoint(x, y);
         return new ECPublicKeyImpl(kp, key.getParams());
+    }
+
+    public static int getVersion(String base58) throws Exception {
+        byte[] data = Base58.decodeChecked(base58);
+        return (int) data[0] & 0xFF;
     }
 }

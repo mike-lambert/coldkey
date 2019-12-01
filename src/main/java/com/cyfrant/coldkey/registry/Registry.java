@@ -105,4 +105,11 @@ public class Registry {
     public StandardNetworkParams getNetworkParams(String id) {
         return registered.get(id);
     }
+
+    public StandardNetworkParams getByPrivateKeyVersion(int version) {
+        return registered.values().stream()
+                .filter(p -> p.getPrivateKeyVersion() == version)
+                .findFirst()
+                .get();
+    }
 }
